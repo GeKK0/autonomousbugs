@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
+MIN_ANTS=20
+MIN_FOOD=10
+FOOD_ENERGY=4 
+
+
 LOCALDISPLAY = True # display using pygame
-DEBUGPRINT = False
 TIMEPRINT = False
 
 if 0: #large space
@@ -28,12 +32,10 @@ FOOD_COLOR = (0,0xff,0)
 
 ###########################################################################
 
-import socket
-import select
-import array
 import time
-import struct
 import random
+rand=random.Random()
+rand.seed(1234)
 
 import world
 
@@ -44,6 +46,8 @@ w = world.World(XMAX,YMAX)
 if LOCALDISPLAY:
     import pygame
     screen = pygame.display.set_mode((XMAX*RECT_SIZE_X,YMAX*RECT_SIZE_Y))
+
+
 
 ###########################################################################
 
@@ -76,9 +80,6 @@ def refreshscreen():
 
 ###########################################################################
 
-rand=random.Random()
-rand.seed(1234)
-
 # Initially add:
 #   1 block rock border
 #   random blocks
@@ -95,9 +96,15 @@ for y in xrange(YMAX):
 
 #w.SetPos(XMAX/2,YMAX/2,world.ANT,world.Ant(w))
 
-MIN_ANTS=20
-MIN_FOOD=10
-FOOD_ENERGY=4 
+# try to include any saved ants
+try:
+    import antdump
+    print "Loaded saved ants from antdump.py"
+    for g in antdump.ants:
+        w.RandAddObj(world.ANT,world.Ant(w,gene=g))
+except:
+    print "There were no saved ants, starting fresh."
+
 
 running = True
 while running:
@@ -133,4 +140,6 @@ while running:
             if event.type == pygame.NOEVENT:
                 break
         pygame.display.flip()
+
+w.DumpAntFile("antdump.py")
 

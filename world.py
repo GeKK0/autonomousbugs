@@ -1,6 +1,7 @@
 # This has all the objects for our world simulation
 
 import geneticmachine
+import time
 import random
 
 rand=random.Random()
@@ -79,6 +80,19 @@ class World:
             for x in xrange(self.xmax):
                 if self.grid[y][x]==ANT:
                     self.obj[y][x].update(x,y)
+    
+    def DumpAntFile(self,filename):
+        '''dump all ant genes to a file'''
+        f=open(filename,"a")
+        f.write("# Ant dump - " + time.ctime() + "\n")
+        f.write("ants=[]\n")
+        for y in xrange(self.ymax):
+            for x in xrange(self.xmax):
+                if self.grid[y][x]==ANT:
+                    g=self.obj[y][x].gm.gene()
+                    f.write("ants.append("+repr(g)+")\n")
+        f.close()
+
 
 class Ant:
     '''
