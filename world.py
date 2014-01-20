@@ -10,7 +10,7 @@ rand.seed(12345)
 ENERGY_MAX = 1.0
 ENERGY_MIN = 0.0
 ENERGY_START = 0.5  #energy a new ant is born with
-ENERGY_BREED = 0.5  #energy cost to lay or fertilize egg
+ENERGY_BREED = 0.6  #energy cost to lay or fertilize egg
 ENERGY_LIVE = 0.001 #energy cost each step for living
 ENERGY_FOOD = 0.1   #energy per turn that can be eaten from food
 ENERGY_MOVE = 0.001 #energy to go forward
