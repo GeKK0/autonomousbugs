@@ -1,0 +1,56 @@
+
+'fitness'
+Unlike in most genetic algorithms, there will be no discrete generations.  Creatures will continuously live and their 'fitness' will be nothing more than surviving and breeding.
+
+'surviving'
+Energy gained from food, lost through time, movement, and laying eggs.  Below a cetain amount the ant dies (and remaining becomes food?).
+
+'world updating'
+Each time tick, ants run their 'function' to determine motion.  Food randomly shows up, and laid scents fade slightly. 
+
+
+'genetics'
+To make ant behavior interesting, let's have a statemachine.  Each state can be a neural network, taking in the sensor input, and outputing possible motions, in addition to possibly selecting to change states.  The genetics will be the list of neuron weights.
+
+
+'senses'
+Vague idea: 
+- several 'smell' senses - food, eggs, dead ant?, other scents
+
+more detailed 1:
+maybe something giving absolute and gradient of smell so they can track?
+
+
+'outputs'
+Vauge idea:
+movement, 'mating?', lay scents for communication or tracking
+
+more detailed 1:
+want gradient to help tracking, but then laying its own scents can really mess that up.  One idea is to have it only smell in a small pie slice of angle in front of it, so laying scent behind doesn't cause problems. This would also lend to movement being 'rotate' and 'move forward'.
+
+more detailed 2:
+how does scent laying work?
+Do we allow it to make any scent? (ie fake out food or egg, etc?)  Maybe no, to make things easier in distinguish.
+
+
+'mating'
+To get it to evolve, we need genetic diversity, so maybe enforce that an ant can't mate with itself. So ants can lay eggs, and if a different ant lays an egg on top of it, a child (or multiple for more diversity?) emerges?
+
+
+
+'scents' more detailed:
+If ants leave scent 'droplets', then one would need to search amongst all objects to find droplets near it.  This would likely make it the slowest part of the update.  Instead let the world be a grid of pixels/tiles which hold scent values.  Since output from neural networks fits better with floating point/analog output, and also because of rotate + forward movement, ants will not move discretely on grid but have floating point position.
+
+How to calculate scent inputs for ants?
+If it is too 'choppy', due to grid of scents, the gradients won't be much help.  Need to think on this a bit.
+
+
+
+------------------------------
+
+The scents input seems like the part that still needs a bit of thought.
+
+I'll work on putting together the neural nets and genetic updating tomorrow, as that is a bit more straight forward.
+
+
+
