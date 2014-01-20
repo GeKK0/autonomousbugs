@@ -30,6 +30,9 @@ class GeneticMachine:
                 weights=None
             self.net.append(neurons.NeuralNetwork(layersize,gene=weights))
 
+    def IncrementState(self,n):
+        self.currentstate = (self.currentstate+n)%self.nstate
+
     def calc(self,data):
         if len(data)!=self.ninput:
             raise Exception("input wrong length")

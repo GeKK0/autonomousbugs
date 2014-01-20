@@ -1,0 +1,30 @@
+
+have everything on a grid to make it easier
+
+If we look at the eight pieces surrounding an ant with 'up' being 'forward'
+...
+.X.
+...
+
+before going complicated, let's see if this will even work
+no "communication" just search for food to survive and breed
+
+each grid can have an object on it:  (rock,ant,egg,food)
+rock cannot be moved through
+
+blue = rock
+white = egg
+red = ant
+green = food
+
+output:
+turn right, turn left, move forward, breed, eat, state_change1, state_change2
+
+input:
+energy, (rock, ant, egg, food) * 5
+
+breed or eat refers to object in front of ant
+attempting to breed with egg of itself?
+- option : sterile? kills egg
+- option : random? randomly make a gene and breeds with it
+

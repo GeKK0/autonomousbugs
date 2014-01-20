@@ -1,0 +1,36 @@
+
+have everything on a grid to make it easier
+
+If we look at the eight pieces surrounding an ant with 'up' being 'forward'
+...
+.X.
+...
+
+then movement can be reduced to 'turn' and 'move forward'
+
+each grid can have an object on it:  (ant,rock,egg,food)
+as well as keeping track of 'scent':  r,g,b
+
+rock cannot be moved through
+
+scent will be displayed as 'dim' to make it easier to see relative
+to objects on the grid
+
+blue = rock
+white = egg
+red = ant
+green = food
+
+output:
+turn right, turn left, move forward, breed, eat, s1, s2, g, b
+
+input:
+energy, (rock, egg, food, g, b) * 5
+
+
+breed or eat refers to object in front of ant
+attempting to breed with egg of itself?
+- option : sterile? kills egg
+- option : random? randomly make a gene and breeds with it
+
+
