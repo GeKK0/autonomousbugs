@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
-MIN_ANTS=20
-MIN_FOOD=10
-FOOD_ENERGY=4 
+MIN_ANTS=100
+MIN_FOOD=20
 
 
 LOCALDISPLAY = True # display using pygame
@@ -63,9 +62,10 @@ def drawcell(x,y):
     elif val==world.FOOD:
         drawbox(x,y,FOOD_COLOR)
     elif val==world.ANT:
-        #scale color by 0.3 to show health
-        erg=w.obj[y][x].energy
-        scale=0.3+0.7*(erg-world.ENERGY_MIN)/(world.ENERGY_MAX-world.ENERGY_MIN)
+        #scale color to show health
+        scale  = (w.obj[y][x].energy-world.ENERGY_MIN)
+        scale /= (world.ENERGY_MAX-world.ENERGY_MIN)
+        scale  = 0.3+max(0.0,0.7*min(1.0,scale))
         clr=tuple(int(scale*c) for c in ANT_COLOR)
         drawbox(x,y,clr)
     elif val==world.EGG:
@@ -115,13 +115,13 @@ while running:
     n = sum(sum(1 for i in row if i==world.ANT) for row in w.grid)
     if n < MIN_ANTS:
         for i in xrange(MIN_ANTS-n):
-            w.RandAddObj(world.ANT,world.Ant(w))
+            w.RandAddObj(world.ANT)
 
     # if we need more food, add it
     n = sum(sum(1 for i in row if i==world.FOOD) for row in w.grid)
     if n < MIN_FOOD:
         for i in xrange(MIN_FOOD-n):
-            w.RandAddObj(world.FOOD,FOOD_ENERGY)
+            w.RandAddObj(world.FOOD)
 
     w.Update()
 
