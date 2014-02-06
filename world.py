@@ -8,18 +8,20 @@ rand=random.Random()
 rand.seed(12345)
 
 # Some settings for the world
-MAX_FITLIST_LEN=5   #'breeding pool' for random ants
+MAX_FITLIST_LEN=10  #'breeding pool' for random ants
 ENERGY_FOOD = 4.0   #energy in a new food pellet
 
 # Some settings for the ants    
 ENERGY_MAX = 1.0
 ENERGY_MIN = 0.0
-ENERGY_START = 0.5  #energy a new ant is born with
-ENERGY_BREED = 0.6  #energy cost to lay or fertilize egg
-ENERGY_LIVE = 0.001 #energy cost each step for living
-ENERGY_EAT = 0.1    #energy per turn that can be eaten from food
-ENERGY_MOVE = 0.001 #energy to go forward
-ENERGY_TURN = 0.001 #energy to turn
+ENERGY_START = 0.5      #energy a new ant is born with
+ENERGY_LAYEGG = 0.6     #energy cost to lay egg
+ENERGY_FERTILIZE = 0.1  #energy cost to fertilize egg
+ENERGY_LIVE = 0.001     #energy cost each step for living
+ENERGY_EATFOOD = 0.1    #energy per turn that can be eaten from food
+ENERGY_EATANT = 0.1     #energy per turn that can be eaten from ant
+ENERGY_MOVE = 0.001     #energy to go forward
+ENERGY_TURN = 0.001     #energy to turn
 
 # enumerate some direction, positive turn=counter-clockwise
 EAST=0
@@ -62,7 +64,11 @@ class World:
         self.grid=[[EMPTY for x in xrange(xmax)] for y in xrange(ymax)]
         self.obj=[[None for x in xrange(xmax)] for y in xrange(ymax)]
         self.time=0
-        self.fitlist=[] # holds (fitness,gm) pairs, sorted by fitness
+        # holds (fitness,gm) pairs, sorted by fitness
+        self.fitlistNorm=[]   # for generation 0 ants
+        self.fitlistChild=[]  # for children ants
+        # final list of gm taken from fitlist
+        self.breedingpool=[]
 
     def GetGridInfo(self,x,y):
         return _TypeLookup[self.grid[y][x]]
@@ -71,33 +77,53 @@ class World:
         self.grid[y][x]=thing
         self.obj[y][x]=info
 
+    def ClearFitlists(self):
+        self.fitlistNorm=[]
+        self.fitlistChild=[]
+
+    def BuildBreedingPool(self):
+        self.breedingpool=[]
+        for f in self.fitlistNorm:
+            self.breedingpool.append(f[1])
+        for f in self.fitlistChild:
+            self.breedingpool.append(f[1])
+
     def Fitness(self,a):
         # lots of tweeking can be done here
-        f=1000.0*a.breed+a.tick+a.eat+a.move
+        f  = 1000000.0*a.generation
+        f += 10000.0*(a.layegg+a.fertilize)
+        f += 100.0*(a.eatfood+a.eatant)
+        f += a.tick
+        f += a.move
         return f
 
     def AddFitnessList(self,a):
         '''add ant to fitness list if it is "worthy" '''
         f=self.Fitness(a)
-        if len(self.fitlist)>=MAX_FITLIST_LEN and f<self.fitlist[0][0]:
+        if a.generation>0:
+            fitlist=self.fitlistChild
+        else:
+            fitlist=self.fitlistNorm
+
+        if len(fitlist)>=MAX_FITLIST_LEN and f<fitlist[0][0]:
             return
-        print "added genes from ant with fitness:",f
-        self.fitlist.append((f,a.gm))
-        self.fitlist.sort(key=lambda x: x[0])
-        if len(self.fitlist)>MAX_FITLIST_LEN:
-            del self.fitlist[0]
+        #print "added genes from ant, gen:",a.generation," fitness:",f
+        fitlist.append((f,a.gm))
+        fitlist.sort(key=lambda x: x[0])
+        if len(fitlist)>MAX_FITLIST_LEN:
+            del fitlist[0]
 
     def RandAddObj(self,thing,info=None):
         if info==None:
             if thing==ANT:
                 info=Ant(self)
-                n=len(self.fitlist)
+                n=len(self.breedingpool)
                 if n>=2:
                     i=rand.randrange(n)
                     j=rand.randrange(n)
-                    a=self.fitlist[i][1]
+                    a=self.breedingpool[i]
                     if i!=j:
-                        b=self.fitlist[j][1]
+                        b=self.breedingpool[j]
                     else:
                         # when i==j, breed with a random
                         b=Ant(self).gm
@@ -166,8 +192,11 @@ class Ant:
         #some statistics
         self.tick=0
         self.move=0
-        self.breed=0
-        self.eat=0
+        self.layegg=0
+        self.fertilize=0
+        self.eatfood=0
+        self.eatant=0
+        self.generation=0
 
     def update(self,x,y):
         '''use genetic machine to determine a move, then perform it.
@@ -218,33 +247,48 @@ class Ant:
         self.tick += 1
             
         # do the genetic machine's bidding
-        if eat > 0.0 and w.grid[fy][fx]==FOOD:
-            self.eat += 1
-            if w.obj[fy][fx] > ENERGY_EAT:
-                self.energy += ENERGY_EAT
-                w.obj[fy][fx] -= ENERGY_EAT
+        if eat > 0.0:
+            if w.grid[fy][fx]==FOOD:
+                self.eatfood += 1
+                if w.obj[fy][fx] > ENERGY_EATFOOD:
+                    self.energy += ENERGY_EATFOOD
+                    w.obj[fy][fx] -= ENERGY_EATFOOD
+                else:
+                    self.energy += w.obj[fy][fx]
+                    w.SetPos(fx,fy,EMPTY,None)
+            elif w.grid[fy][fx]==ANT:
+                self.eatant += 1
+                self.energy += ENERGY_EATANT
+                w.obj[fy][fx].energy -= ENERGY_EATANT
             else:
-                self.energy += w.obj[fy][fx]
-                w.SetPos(fx,fy,EMPTY,None)
+                #penalty for trying to eat nothing
+                self.energy -= ENERGY_EATFOOD
 
         if breed > 0.0:
-            self.energy -= ENERGY_BREED
-            if self.energy>ENERGY_MIN:
-                if w.grid[fy][fx]==EGG:
+            if w.grid[fy][fx]==EGG:
+                self.energy -= ENERGY_FERTILIZE
+                if self.energy>0:
                     #fertilize egg, making a new ant
-                    self.breed += 1
+                    self.fertilize += 1
                     c=Ant(w)
-                    if w.obj[fy][fx]==self.gm:
+                    egg=w.obj[fy][fx]
+                    if egg==self:
                         #our own egg, pretend fertilize with random
                         c.gm=c.gm.breed(self.gm)
                     else:
                         #not our egg, fertilize normally
-                        c.gm=w.obj[fy][fx].breed(self.gm)
+                        c.gm=egg.gm.breed(self.gm)
+                    c.generation=max(self.generation,egg.generation)+1
                     w.SetPos(fx,fy,ANT,c)
-                elif w.grid[fy][fx]==EMPTY:
+            elif w.grid[fy][fx]==EMPTY:
+                self.energy -= ENERGY_LAYEGG
+                if self.energy>0:
                     #lay egg
-                    self.breed += 1
-                    w.SetPos(fx,fy,EGG,self.gm)
+                    self.layegg += 1
+                    w.SetPos(fx,fy,EGG,self)
+            else:
+                #penalty for trying to fertilize something other than egg
+                self.energy -= ENERGY_FERTILIZE
 
         if move > 0.0:
             self.energy -= ENERGY_MOVE

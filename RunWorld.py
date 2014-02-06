@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 
-MIN_ANTS=100
-MIN_FOOD=20
+START_ANTS=1000
+MIN_FOOD=1000
 
 
 LOCALDISPLAY = True # display using pygame
 TIMEPRINT = False
 
-if 0: #large space
+if 1: #large space
     # size of grid 'squares'
-    RECT_SIZE_X = 2
-    RECT_SIZE_Y = 2
+    RECT_SIZE_X = 4
+    RECT_SIZE_Y = 4
     # number of grid squares
-    XMAX = 320
-    YMAX = 240
+    XMAX = 236
+    YMAX = 170
 else: #small space
     # size of grid 'squares'
     RECT_SIZE_X = 8
@@ -28,6 +28,7 @@ BACK_COLOR = (0,0,0)
 EGG_COLOR = (0xff,0xff,0xff)
 ANT_COLOR = (0xff,0,0)
 FOOD_COLOR = (0,0xff,0)
+STATE_COLOR =[(0xff,0,0),(0xff,0xff,0),(0,0xff,0xff),(0,0,0xff)]
 
 ###########################################################################
 
@@ -53,6 +54,27 @@ if LOCALDISPLAY:
 def drawbox(x,y,color):
     screen.fill(color,(x*RECT_SIZE_X,y*RECT_SIZE_Y,RECT_SIZE_X,RECT_SIZE_Y))
 
+def drawant(x,y,a):
+    #scale color to show health
+    scale  = (a.energy-world.ENERGY_MIN)
+    scale /= (world.ENERGY_MAX-world.ENERGY_MIN)
+    scale  = 0.3+max(0.0,0.7*min(1.0,scale))
+    #clr=tuple(int(scale*c) for c in ANT_COLOR)
+    clr=tuple(int(scale*c) for c in STATE_COLOR[a.gm.currentstate])
+    drawbox(x,y,clr)
+    x *= RECT_SIZE_X
+    y *= RECT_SIZE_Y
+    clr=(0xff,0xff,0xff)#STATE_COLOR[a.gm.currentstate]    
+    if a.dir==world.NORTH:
+        screen.fill(clr,(x,y,RECT_SIZE_X,1))
+    elif a.dir==world.EAST:
+        screen.fill(clr,(x+RECT_SIZE_X-1,y,1,RECT_SIZE_Y))
+    elif a.dir==world.SOUTH:
+        screen.fill(clr,(x,y+RECT_SIZE_Y-1,RECT_SIZE_X,1))
+    elif a.dir==world.WEST:
+        screen.fill(clr,(x,y,1,RECT_SIZE_Y))
+
+
 def drawcell(x,y):
     val=w.grid[y][x]
     if val==world.EMPTY:
@@ -62,12 +84,7 @@ def drawcell(x,y):
     elif val==world.FOOD:
         drawbox(x,y,FOOD_COLOR)
     elif val==world.ANT:
-        #scale color to show health
-        scale  = (w.obj[y][x].energy-world.ENERGY_MIN)
-        scale /= (world.ENERGY_MAX-world.ENERGY_MIN)
-        scale  = 0.3+max(0.0,0.7*min(1.0,scale))
-        clr=tuple(int(scale*c) for c in ANT_COLOR)
-        drawbox(x,y,clr)
+	drawant(x,y,w.obj[y][x])
     elif val==world.EGG:
         drawbox(x,y,EGG_COLOR)
     else:
@@ -94,16 +111,60 @@ for y in xrange(YMAX):
         else:
             w.SetPos(x,y,world.EMPTY,None)
 
+import pickle
+roundnum=0
+
+def SetupRound():
+    global roundnum
+
+    #print some statistics
+    fitN=[f[0] for f in w.fitlistNorm]
+    fitC=[f[0] for f in w.fitlistChild]
+    if len(fitN)==0:
+        fitN=[0.0]
+    if len(fitC)==0:
+        fitC=[0.0]
+    stat  = "round num: %d\n"%roundnum
+    stat += "  gen 0 ants, max:%15f avg:%15f\n"%(max(fitN),sum(fitN)/len(fitN))
+    stat += "  child ants, max:%15f avg:%15f\n"%(max(fitC),sum(fitC)/len(fitC))
+    print stat
+    open("save_stats.txt","a").write(stat)
+
+    #save round fitnesses
+    pickle.dump( (w.fitlistNorm,w.fitlistChild), open("save_fitlist.bin","wb"))
+
+    #now setup for new round
+    w.BuildBreedingPool()
+    w.ClearFitlists()
+    roundnum+=1
+
+    # clear anything that is not a rock
+    for y in xrange(YMAX):
+        for x in xrange(XMAX):
+            if w.grid[y][x]!=world.ROCK:
+                w.SetPos(x,y,world.EMPTY,None)
+
+    # now add starting food
+    for i in xrange(MIN_FOOD):
+        w.RandAddObj(world.FOOD)
+
+    # now add starting ants
+    for i in xrange(START_ANTS):
+        w.RandAddObj(world.ANT)
+
+
+
+
 #w.SetPos(XMAX/2,YMAX/2,world.ANT,world.Ant(w))
 
-# try to include any saved ants
+# try to continue last run
 try:
-    import antdump
-    print "Loaded saved ants from antdump.py"
-    for g in antdump.ants:
-        w.RandAddObj(world.ANT,world.Ant(w,gene=g))
+    f=open("save_fitlist.bin","rb")
+    print "Loading saved fitness lists from previous run"
+    w.fitlistNorm,w.fitlistChild = pickle.load(f)
+    f.close()
 except:
-    print "There were no saved ants, starting fresh."
+    print "No saved data, starting fresh."    
 
 
 running = True
@@ -111,11 +172,10 @@ while running:
     if TIMEPRINT:
         print "loop %d :"%w.time, time.time()
 
-    # if we need more ants, add them
+    # if ants all dead, start new round
     n = sum(sum(1 for i in row if i==world.ANT) for row in w.grid)
-    if n < MIN_ANTS:
-        for i in xrange(MIN_ANTS-n):
-            w.RandAddObj(world.ANT)
+    if n == 0:
+        SetupRound()
 
     # if we need more food, add it
     n = sum(sum(1 for i in row if i==world.FOOD) for row in w.grid)

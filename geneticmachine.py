@@ -15,7 +15,7 @@ class GeneticMachine:
             layersize=GeneticMachine.defaultLayersize(ninput,noutput)
         self.layersize=layersize
         self.nstate=nstate
-        self.currentstate=0
+        self.currentstate=rand.randrange(nstate)#0
 
         n=neurons.NeuralNetwork.genesize(layersize)
         if gene and len(gene)!=n*nstate:
